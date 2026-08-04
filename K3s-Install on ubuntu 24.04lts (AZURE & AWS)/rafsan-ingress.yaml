@@ -1,0 +1,50 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rafsan-ingress-rules
+  namespace: production
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_buffer_size 128k;
+      proxy_buffers 4 256k;
+      proxy_busy_buffers_size 256k;
+      proxy_buffering off;
+    #nginx.ingress.kubernetes.io/rewrite-target: /$2
+    #nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-allow-headers: Authorization, Content-Type
+    nginx.ingress.kubernetes.io/cors-allow-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/enable-websockets: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.org/client-max-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    #nginx.ingress.kubernetes.io/upstream-hash-by: $arg_access_token
+    #nginx.org/websocket-services: "travilo-notification-management-api"
+spec:
+  ingressClassName: rafsan-ingress-class
+  rules:
+    - host: k3s-aws.rafsan.com
+      http:
+        paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: jasfare-b2b-panel-frontend
+              port:
+                number: 80
+  tls:
+    - hosts:
+        - k3s-aws.rafsan.com
+      secretName: rafsan-tls
