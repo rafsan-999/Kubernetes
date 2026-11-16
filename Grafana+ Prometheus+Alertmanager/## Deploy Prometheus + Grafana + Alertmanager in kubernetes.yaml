@@ -1,0 +1,97 @@
+## Deploy Prometheus + Grafana + Alertmanager with Ingress and LoadBalancer for monitoring in Kubernetes cluster
+
+## By default, Grafana runs as a service in the monitoring namespace.
+
+## Create a Monitoring Namespace
+  kubectl create namespace monitoring
+
+## Install Prometheus & Grafana (using kube-prometheus-stack)
+  helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  helm repo update
+
+## Install kube-prometheus-stack
+  helm install kube-prometheus prometheus-community/kube-prometheus-stack -n monitoring
+
+## This will create:
+Prometheus
+Grafana
+Alertmanager
+Node exporter
+kube-state-metrics
+
+## Check pods
+  kubectl get pods -n monitoring
+
+## Nginx Ingress Controller
+
+    kubectl run nginx --image=nginx --namespace=monitoring
+    kubectl config set-context --current --namespace=monitoring
+    helm -n monitoring install flykoe-ingress-monitoring nginx-stable/nginx-ingress \
+    --set controller.service.type=LoadBalancer \
+    --set controller.ingressClass.name=flykoe-ingress-monitoring \
+    --set controller.ingressClass.create=true \
+    --set controller.ingressClass.setAsDefaultIngress=false
+
+kubectl -n monitoring get all
+
+## Create Secret
+    kubectl -n monitoring create secret tls flykoe-monitoring-tls --key monitoring_flykoe_key.pem --cert monitoring_flykoe_cert.pem
+
+## Expose Grafana & Prometheus with Ingress
+#Create a file monitoring-ingress.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: flykoe-ingress-monitoring
+  rules:
+  - host: grafana.flykoe.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-prometheus-grafana
+            port:
+              number: 80
+  - host: prometheus.flykoe.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-prometheus-kube-prome-prometheus
+            port:
+              number: 9090
+  - host: alertmanager.flykoe.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-prometheus-kube-prome-alertmanager
+            port:
+              number: 9093
+  tls:
+  - hosts:
+    - grafana.flykoe.com
+    - prometheus.flykoe.com
+    - alertmanager.flykoe.com
+    secretName: flykoe-monitoring-tls
+
+
+kubectl apply -f monitoring-ingress.yaml
+## Use that <EXTERNAL-IP> in your DNS to point 
+grafana.flykoe.com prometheus.flykoe.com alertmanager.flykoe.com
+
+Grafana default login password
+user: admin
+pass:  prom-operator

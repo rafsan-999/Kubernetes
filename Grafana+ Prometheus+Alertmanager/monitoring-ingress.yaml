@@ -1,0 +1,46 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monitoring-ingress
+  namespace: monitoring
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: flykoe-ingress-monitoring
+  rules:
+  - host: grafana.flykoe.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-prometheus-grafana
+            port:
+              number: 80
+  - host: prometheus.flykoe.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-prometheus-kube-prome-prometheus
+            port:
+              number: 9090
+  - host: alertmanager.flykoe.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: kube-prometheus-kube-prome-alertmanager
+            port:
+              number: 9093
+  tls:
+  - hosts:
+    - grafana.flykoe.com
+    - prometheus.flykoe.com
+    - alertmanager.flykoe.com
+    secretName: flykoe-monitoring-tls
